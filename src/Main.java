@@ -15,7 +15,7 @@ public class Main {
         pizza.printPizza();
         int[][] cells = pizza.cells;
 
-        List<Slice> availibleSclices = s.findAvailibleSlices(3, cells);
+        List<Slice> availibleSclices = s.findAvailibleSlices(pizza.maxCellsPerSlice, cells);
         s.findValidSlices(availibleSclices, cells);
 
         s.solveHashCodeProblem(cells,

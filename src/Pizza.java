@@ -27,4 +27,15 @@ public class Pizza {
         }
         System.out.println(board);
     }
+
+    public String toString() {
+        String board = "";
+        for (int row = 0; row < this.cells.length; row++) {
+            for (int col = 0; col < this.cells[0].length; col++) {
+                board += this.cells[row][col];
+            }
+            board += "\n";
+        }
+        return board;
+    }
 }

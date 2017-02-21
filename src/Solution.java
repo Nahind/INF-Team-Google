@@ -84,7 +84,7 @@ public class Solution {
                     for (int r1 = 0; r1 <= cells.length - sliceRows; r1++) {
                         int r2 = r1 + sliceRows - 1;
                         // System.out.println(r1 + " r " + r2);
-                        slices.add(new Slice(r1, r2, r1, c2));
+                        slices.add(new Slice(r1, c1, r2, c2));
                         count++;
                         // System.out.println("count = " + count);
                     }
@@ -97,6 +97,8 @@ public class Solution {
     }
 
     public List<Slice> findValidSlices(List<Slice> slices, int[][] cells) {
+
+        List<Slice> validSlices = new ArrayList<>();
 
         for (int k = 0; k <slices.size(); k++) {
             Slice s = slices.get(k);
@@ -119,11 +121,11 @@ public class Solution {
                 }
                 if (isCut) break;
             }
-            if (!hasM || !hasT || isCut) slices.remove(k);
+            if (hasM && hasT && !isCut) validSlices.add(slices.get(k));
         }
 
-        System.out.println("valid slices count = " + slices.size());
-        return slices;
+        // System.out.println("valid slices count = " + slices.size());
+        return validSlices;
     }
 
     public int[][] cutPizza(int[][] cells, Slice slice) {
@@ -151,7 +153,7 @@ public class Solution {
             int sliceSize,
             int totalCells,
             int minOfEach,
-            List<Slice> cutSclices,
+            List<Slice> cutSlices,
             int[][] originalPizza
     ) {
 
@@ -163,6 +165,7 @@ public class Solution {
             board += "\n";
         }
         System.out.println(board);
+        System.out.println("slice size = " + sliceSize);
 
         // Condition d'arrêt
         if (sliceSize < minOfEach*2) {
@@ -175,10 +178,12 @@ public class Solution {
         // List valid Slices
         List<Slice> validSlices = findValidSlices(availibleSlices, pizza);
 
+        System.out.println("valid slices count = " + validSlices.size());
+
         // If no slices is valid, we might have not did the right cut
         if (validSlices.size() == 0) {
 
-            int newTotal = computeTotalCells(cutSclices);
+            int newTotal = computeTotalCells(cutSlices);
 
             // If the newTotal is higher than the last one, we update it
             if (newTotal > totalCells)
@@ -187,16 +192,29 @@ public class Solution {
             }
 
             solveHashCodeProblem(
-                    pizza, sliceSize - 1, totalCells, minOfEach, cutSclices, originalPizza
+                    pizza, sliceSize - 1, totalCells, minOfEach, cutSlices, originalPizza
             );
         }
 
         // If there is some valid slices, we cut them out
         for (Slice s : validSlices) {
             cutPizza(pizza, s);
+            cutSlices.add(s);
+            System.out.println("cut ");
 
-            if(!solveHashCodeProblem(pizza, sliceSize, totalCells, minOfEach, cutSclices, originalPizza)) {
+            if(!solveHashCodeProblem(pizza, sliceSize, totalCells, minOfEach, cutSlices, originalPizza)) {
                 cutBackPizza(pizza, s, originalPizza);
+                cutSlices.remove(s);
+                System.out.println("cut BACK");
+                board = "";
+                for (int row = 0; row < pizza.length; row++) {
+                    for (int col = 0; col < pizza[0].length; col++) {
+                        board += pizza[row][col];
+                    }
+                    board += "\n";
+                }
+                System.out.println(board);
+
 
             } else {
                 return true;
