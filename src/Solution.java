@@ -1,6 +1,7 @@
-import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by nandane on 20/02/17.
@@ -8,59 +9,28 @@ import java.util.List;
 public class Solution {
 
     Pizza pizza;
+    public  Map<Integer, List<Slice>> allAvailibleSlices;
+    public int totalCellsInSlices = 0;
+    public List<Slice> finalCut;
+    int pizzaSize;
+    int iterationCount = 0;
 
-    public Pizza loadPizza(File pizzaFile) {
-        int[][] cells = new int[0][0];
-        int rows = 0;
-        int cols = 0;
-        int minOfEach = 0;
-        int maxCells = 0;
-        int counter = 0;
-
-        try {
-            FileInputStream fStream = new FileInputStream(pizzaFile);
-            BufferedReader in = new BufferedReader(new InputStreamReader(fStream));
-            boolean firstline = true;
-
-            while (in.ready()) {
-                String line = in.readLine();
-                if (firstline) {
-                    String[] data = line.split(" ");
-                    rows = Integer.parseInt(data[0]);
-                    cols = Integer.parseInt(data[1]);
-                    minOfEach = Integer.parseInt(data[2]);
-                    maxCells = Integer.parseInt(data[3]);
-                    cells = new int[rows][cols];
-                    firstline = false;
-                } else {
-                    char[] data = line.toCharArray();
-                    for (int k = 0; k < data.length; k++) {
-                        int val;
-                        if (data[k] == 'T') val = 0;
-                        else val = 1;
-                        cells[counter][k] = val;
-                    }
-                    counter++;
-                }
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return new Pizza(rows, cols, minOfEach, maxCells, cells);
+    Solution(Pizza p) {
+        this.pizza = p;
+        allAvailibleSlices = findAllAvailibleSlices(
+                this.pizza.cells, this.pizza.minOfEach, this.pizza.maxCellsPerSlice);
+        pizzaSize = p.cells[0].length * p.cells.length;
     }
 
-    public int computeTotalCells(List<Slice> slices) {
-        int sum = 0;
-
-        for (Slice s : slices) {
-            int rows = Math.max(s.r2 - s.r1, 1);
-            int cols = Math.max(s.c2 - s.c1, 1);
-            sum += rows * cols;
+    public void printCells(int[][] cells) {
+        String board = "";
+        for (int row = 0; row < cells.length; row++) {
+            for (int col = 0; col < cells[0].length; col++) {
+                board += cells[row][col];
+            }
+            board += "\n";
         }
-
-        return sum;
+        System.out.println(board);
     }
 
     public List<Slice> findAvailibleSlices(int sliceSize, int[][] cells) {
@@ -96,8 +66,18 @@ public class Solution {
         return slices;
     }
 
-    public List<Slice> findValidSlices(List<Slice> slices, int[][] cells) {
+    public Map<Integer, List<Slice>> findAllAvailibleSlices(int[][] pizza, int minOfEach, int maxSize) {
+        HashMap<Integer, List<Slice>> allAvailibleSlices = new HashMap<>();
 
+        for (int i = minOfEach*2; i <= maxSize; i++) {
+            List<Slice> slices = findAvailibleSlices(i, pizza);
+            allAvailibleSlices.put(i, slices);
+        }
+
+        return allAvailibleSlices;
+    }
+
+    public List<Slice> findValidSlices(List<Slice> slices, int[][] cells) {
         List<Slice> validSlices = new ArrayList<>();
 
         for (int k = 0; k <slices.size(); k++) {
@@ -107,7 +87,6 @@ public class Solution {
             boolean hasM = false;
             for (int i = s.r1; i <= s.r2; i++) {
                 for (int j = s.c1; j <= s.c2; j++) {
-                    if (hasM && hasT) break;
                     // 1 --> Mushroom
                     // 0 --> Tomato
                     // 2 --> Slice is cut
@@ -121,10 +100,11 @@ public class Solution {
                 }
                 if (isCut) break;
             }
-            if (hasM && hasT && !isCut) validSlices.add(slices.get(k));
+            if (hasM && hasT && !isCut) {
+                validSlices.add(s);
+            }
         }
 
-        // System.out.println("valid slices count = " + slices.size());
         return validSlices;
     }
 
@@ -148,80 +128,79 @@ public class Solution {
         return cells;
     }
 
-    public Boolean solveHashCodeProblem(
-            int[][] pizza,
-            int sliceSize,
-            int totalCells,
-            int minOfEach,
-            List<Slice> cutSlices,
-            int[][] originalPizza
-    ) {
+    public int calcTotalCutSlices(int[][] cells) {
+        int total = 0;
 
-        String board = "";
-        for (int row = 0; row < pizza.length; row++) {
-            for (int col = 0; col < pizza[0].length; col++) {
-                board += pizza[row][col];
+        for (int i = 0; i < cells.length; i++) {
+            for (int j = 0; j < cells[0].length; j++) {
+
+                if (cells[i][j] == 2) total++;
             }
-            board += "\n";
         }
-        System.out.println(board);
-        System.out.println("slice size = " + sliceSize);
+
+        return total;
+    }
+
+    public Boolean solveHashCodeProblem(int[][] currentPizza, int sliceSize, List<Slice> cutSlices)
+    {
+        this.iterationCount++;
+        System.out.println("iteration count = " + this.iterationCount);
+        // System.out.println("slice size checking = " + sliceSize);
 
         // Condition d'arrêt
-        if (sliceSize < minOfEach*2) {
+        if (sliceSize < this.pizza.minOfEach*2) {
             return false;
         }
 
+        if (totalCellsInSlices == pizzaSize) return true;
+
         // List availible Slices
-        List<Slice> availibleSlices = findAvailibleSlices(sliceSize, pizza);
+        List<Slice> availibleSlices = this.allAvailibleSlices.get(sliceSize);
 
         // List valid Slices
-        List<Slice> validSlices = findValidSlices(availibleSlices, pizza);
+        List<Slice> validSlices = findValidSlices(availibleSlices, currentPizza);
 
-        System.out.println("valid slices count = " + validSlices.size());
+        // System.out.println("valid slices count = " + validSlices.size());
+        // System.out.println("slices list len = " + cutSlices.size());
 
         // If no slices is valid, we might have not did the right cut
         if (validSlices.size() == 0) {
 
-            int newTotal = computeTotalCells(cutSlices);
+            int newTotal = calcTotalCutSlices(currentPizza);
 
             // If the newTotal is higher than the last one, we update it
-            if (newTotal > totalCells)
+            if (newTotal > totalCellsInSlices)
             {
-                totalCells = newTotal;
+                totalCellsInSlices = newTotal;
+                ArrayList<Slice> helper = new ArrayList<>();
+                helper.addAll(cutSlices);
+                finalCut = helper;
             }
 
             solveHashCodeProblem(
-                    pizza, sliceSize - 1, totalCells, minOfEach, cutSlices, originalPizza
+                    currentPizza, sliceSize - 1, cutSlices
             );
         }
 
         // If there is some valid slices, we cut them out
-        for (Slice s : validSlices) {
-            cutPizza(pizza, s);
+        for (int k = 0; k < validSlices.size(); k++) {
+
+            Slice s = validSlices.get(k);
+            cutPizza(currentPizza, s);
             cutSlices.add(s);
-            System.out.println("cut ");
+            // System.out.println("cut ");
 
-            if(!solveHashCodeProblem(pizza, sliceSize, totalCells, minOfEach, cutSlices, originalPizza)) {
-                cutBackPizza(pizza, s, originalPizza);
+            if(!solveHashCodeProblem(currentPizza, sliceSize, cutSlices)) {
+                cutBackPizza(currentPizza, s, this.pizza.cells);
                 cutSlices.remove(s);
-                System.out.println("cut BACK");
-                board = "";
-                for (int row = 0; row < pizza.length; row++) {
-                    for (int col = 0; col < pizza[0].length; col++) {
-                        board += pizza[row][col];
-                    }
-                    board += "\n";
-                }
-                System.out.println(board);
-
+                // System.out.println("cut BACK");
 
             } else {
                 return true;
             }
         }
-
-        System.out.println("Total = " + totalCells);
+        // System.out.println("slices array length = " + cutSlices.size());
+        // System.out.println("Total = " + totalCellsInSlices);
         return false;
     }
 }
